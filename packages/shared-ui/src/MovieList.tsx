@@ -10,19 +10,30 @@ export function MovieList() {
   const [columns, setColumns] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const refs = useRef<(View | null)[]>([]);
+  const scrollRef = useRef<ScrollView>(null);
+  const gridRef = useRef<View>(null);
+  const gridTop = useRef(0);
+  const pendingTVFocus = useRef<number | null>(0);
   const restoreFocus = useRef(false);
   const movie = movies[selected];
   const closeDetails = useCallback(() => {
+    pendingTVFocus.current = selected;
     restoreFocus.current = true;
     setShowDetails(false);
-  }, []);
+  }, [selected]);
+  const revealTVCard = () => {
+    if (!Platform.isTV || !gridRef.current) return;
+    refs.current[selected]?.measureLayout(gridRef.current, (_x, y) => {
+      scrollRef.current?.scrollTo({ y: gridTop.current + y - 10, animated: false });
+    }, () => {});
+  };
   useEffect(() => {
     if (showDetails || !restoreFocus.current) return;
     restoreFocus.current = false;
     const frame = requestAnimationFrame(() => {
       const card = refs.current[selected];
       if (Platform.OS === 'web') (card as unknown as HTMLElement | null)?.focus();
-      else card?.setNativeProps({ hasTVPreferredFocus: true });
+      else if (!Platform.isTV) card?.setNativeProps({ hasTVPreferredFocus: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [showDetails, selected]);
@@ -65,7 +76,7 @@ export function MovieList() {
         <Text style={s.profile}>F</Text>
       </View>
       {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
-      <ScrollView style={showDetails ? { display: 'none' } : undefined} contentContainerStyle={s.content}>
+      {(!showDetails || !Platform.isTV) && <ScrollView ref={scrollRef} onContentSizeChange={revealTVCard} style={showDetails ? { display: 'none' } : undefined} contentContainerStyle={s.content}>
         <View style={s.hero}>
           <View style={s.heroCopy}>
             <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
@@ -81,13 +92,19 @@ export function MovieList() {
           </View>
         </View>
         <View style={s.collectionHead}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-        <View style={s.grid} onLayout={event => {
+        <View ref={gridRef} style={s.grid} onLayout={event => {
+          gridTop.current = event.nativeEvent.layout.y;
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width));
+          revealTVCard();
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => {
+            if (Platform.isTV && (showDetails || (pendingTVFocus.current !== null && pendingTVFocus.current !== index))) return;
+            pendingTVFocus.current = null;
+            setSelected(index);
+          }} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
-      </ScrollView>
+      </ScrollView>}
       <View style={s.help}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>
     </View>
   );
