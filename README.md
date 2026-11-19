@@ -86,14 +86,21 @@ manifest, AppRegistry component matching the manifest ID, and the build-vega CLI
 Dependencies are installable from npm, but a native build requires Amazon's
 Vega SDK 2 / Kepler 4 toolchain and an SDK-configured environment.
 
-1. Install and initialize the Vega SDK following Amazon's developer documentation.
-   Activate its environment and start a Vega virtual device (or attach a device).
+1. Install the SDK with Amazon's public installer:
+   `curl -fsSL https://sdk-installer.vega.labcollab.net/get_vvm.sh | bash`.
+   Activate it with `source ~/vega/env`, then run `vega virtual-device start`
+   (or attach a device). On Linux, keep the default graphics acceleration enabled;
+   `--no-gl-accel` produced a black display on this machine.
 2. From this repository root, run `yarn install --frozen-lockfile`.
 3. Run `yarn vega` for Metro if developing with a debug device.
 4. Run `yarn workspace @tv/vega build:debug` or `yarn build:vega` for Release.
    These invoke `react-native build-vega --build-type Debug|Release`.
-5. Install/launch the produced package with the device tools supplied by your SDK
-   (`vega exec vda`); use the output package path printed by build-vega.
+5. For the Linux x86_64 virtual device, install and launch the Release build:
+   `vega run-app apps/vega/build/private/kepler/vega/0.1/vega/x86_64/Release/vega_x86_64.vpkg com.frame.movies.main`.
+   For other targets/build types use the package path printed by build-vega.
+6. Send remote events with `vega exec vda shell inputd-cli button_press KEY_RIGHT`
+   (also `KEY_LEFT`, `KEY_UP`, `KEY_DOWN`). The first event brings the collection
+   into view and focuses its first card; subsequent events navigate the grid.
 
 The manifest only requests input/network services: this app is a catalogue,
 not a media player. Validate the scaffold and permissions against your installed
@@ -114,6 +121,10 @@ SDK before shipping.
   `android.hardware.touchscreen` with `required="false"`.
 - No Gradle/APK build or native remote/device test was run. Fire TV and Android TV
   runtime behavior is unverified. tvOS cannot be built on Linux; it needs a Mac.
-  Vega native build/runtime is unverified because the Vega SDK is not installed.
+  Vega Debug and Release builds subsequently passed with SDK 2.0.15159 / CLI 1.4.9.
+  The Release x86_64 package ran in the Vega Virtual Device with loaded posters;
+  injected D-pad Right moved the lime focus border from The Quiet Earth to
+  Beyond the Blue. Screenshots are saved outside the repo in
+  `~/vega-screenshots/initial-list.png` and `~/vega-screenshots/after-dpad-right.png`.
 - Yarn reports upstream deprecated packages and peer-dependency warnings; these
-  did not prevent installation/export. No remote is configured and nothing is pushed.
+  did not prevent installation/export or the Vega builds.
