@@ -56,9 +56,23 @@ cd apps/expo-multi-tv/android
 ```
 
 The TV config plugin generates a leanback launcher, TV banner, and marks a
-touchscreen as optional. Android TV and Android-based Fire TV use the same app.
+touchscreen and leanback as optional (`androidTVRequired: false`). Android TV and
+Android-based Fire TV use the same app.
 Generated android/ios folders are intentionally ignored; regenerate with prebuild.
 Do not use the phone Expo Go client for native TV.
+For a Gradle debug APK on an x86_64 TV emulator:
+
+```sh
+cd apps/expo-multi-tv/android
+./gradlew :app:assembleDebug -PreactNativeArchitectures=x86_64
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb reverse tcp:8081 tcp:8081
+cd ..
+EXPO_TV=1 npx expo start --localhost
+```
+
+Keep Metro running for this debug build. The architecture flag above is for the
+emulator only; omit it when building for physical Fire TV hardware.
 For repeatable future emulator sessions, include Android SDK/AVD setup in your
 machine's declarative environment (blueprint).
 
@@ -119,12 +133,26 @@ SDK before shipping.
 - Android TV prebuild succeeded with EXPO_TV=1. Generated AndroidManifest.xml
   contains `android.intent.category.LEANBACK_LAUNCHER`, a TV banner, and
   `android.hardware.touchscreen` with `required="false"`.
-- No Gradle/APK build or native remote/device test was run. Fire TV and Android TV
-  runtime behavior is unverified. tvOS cannot be built on Linux; it needs a Mac.
+- Gradle `:app:assembleDebug -PreactNativeArchitectures=x86_64` and APK install
+  succeeded on an Android 36 Android TV x86_64 AVD. Android 34's TV image was only
+  available as x86/ARM, so Android 36 was used for the requested x86_64 emulator.
+  Maven Central returned HTTP 429; a machine-local Gradle init script redirected
+  Central downloads to Google's Maven Central mirror (not a project requirement).
+- The TV launcher's Apps tab showed the Frame banner; selecting it launched the
+  catalogue. D-pad right/down moved focus to After Midnight, and center opened
+  its details. Back returned to the collection. Posters loaded over the network;
+  the movie data is bundled and needs no API key. The active card now requests
+  preferred TV focus instead of leaving initial selection to the native engine.
+- `:app:dependencies` completed with no `gms` or `firebase` matches. Regenerating
+  prebuild preserved optional touchscreen/leanback, the leanback launcher intent,
+  and the banner. This is a compatibility check, not a physical Fire TV test.
+- Android evidence: `/home/ubuntu/shots/launcher.png`, `list.png`, `focused.png`,
+  `details.png`, and `demo.mp4` (all in `/home/ubuntu/shots/`).
+- Physical Fire TV runtime is unverified. tvOS cannot be built on Linux; it needs a Mac.
   Vega Debug and Release builds subsequently passed with SDK 2.0.15159 / CLI 1.4.9.
   The Release x86_64 package ran in the Vega Virtual Device with loaded posters;
   injected D-pad Right moved the lime focus border from The Quiet Earth to
   Beyond the Blue. Screenshots are saved outside the repo in
   `~/vega-screenshots/initial-list.png` and `~/vega-screenshots/after-dpad-right.png`.
 - Yarn reports upstream deprecated packages and peer-dependency warnings; these
-  did not prevent installation/export or the Vega builds.
+  did not prevent installation/export or the Android and Vega builds.
