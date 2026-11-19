@@ -16,18 +16,14 @@ export function MovieList() {
   const [showDetails, setShowDetails] = useState(false);
   const refs = useRef<(View | null)[]>([]);
   const scrollRef = useRef<ScrollView>(null);
-  const detailRef = useRef<View>(null);
   const collectionRef = useRef<View>(null);
-  const scrollToDetail = () => {
+  const navigateCollection = (top: boolean) => {
     if (!web) return;
-    const element = detailRef.current as unknown as HTMLElement | null;
-    const viewport = scrollRef.current as unknown as HTMLElement | null;
-    if (!element || !viewport) return;
-    const bounds = element.getBoundingClientRect();
-    const frame = viewport.getBoundingClientRect();
-    if (bounds.top < frame.top || bounds.bottom > frame.bottom) {
-      element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
+    setShowDetails(false);
+    requestAnimationFrame(() => {
+      if (top) scrollRef.current?.scrollTo({ y: 0, animated: true });
+      else (collectionRef.current as unknown as HTMLElement | null)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   };
   const restoreFocus = useRef(false);
   const movie = movies[selected];
@@ -82,12 +78,10 @@ export function MovieList() {
         <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
         {!web && <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>}
         {web && !narrow && <View style={s.tabs}>
-          <Pressable accessibilityRole="button" onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} style={web && s.pointer}>
+          <Pressable accessibilityRole="button" onPress={() => navigateCollection(true)} style={web && s.pointer}>
             {state => <Text style={[s.tabActive, web && (state as typeof state & { hovered?: boolean }).hovered && s.tabHover]}>Discover</Text>}
           </Pressable>
-          <Pressable accessibilityRole="button" onPress={() => {
-            if (web) (collectionRef.current as unknown as HTMLElement | null)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-          }} style={web && s.pointer}>
+          <Pressable accessibilityRole="button" onPress={() => navigateCollection(false)} style={web && s.pointer}>
             {state => <Text style={[s.tab, web && (state as typeof state & { hovered?: boolean }).hovered && s.tabHover]}>The collection</Text>}
           </Pressable>
         </View>}
@@ -101,7 +95,7 @@ export function MovieList() {
             <Text style={[s.headline, narrow && s.narrowHeadline]}>A world worth{ '\n' }watching.</Text>
             <Text style={s.subline}>Extraordinary stories. Unexpected perspectives. Find your next escape.</Text>
           </View>
-          <View ref={detailRef} style={[s.detail, narrow && s.narrowDetail]} accessibilityLiveRegion="polite">
+          <View style={[s.detail, narrow && s.narrowDetail]} accessibilityLiveRegion="polite">
             <Text style={s.detailKicker}>IN FOCUS  /  {String(selected + 1).padStart(2, '0')}</Text>
             <Text style={s.detailTitle}>{movie.title}</Text>
             <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {movie.genre}</Text>
@@ -113,7 +107,7 @@ export function MovieList() {
         <View style={s.grid} onLayout={event => {
           if (event.nativeEvent.layout.width > 0) setGridWidth(event.nativeEvent.layout.width);
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onPress={scrollToDetail} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
       </ScrollView>
