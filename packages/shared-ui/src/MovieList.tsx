@@ -4,6 +4,7 @@ import { MovieCard } from './MovieCard';
 import { MovieDetails } from './MovieDetails';
 import { movies } from './movies';
 import { CARD_MARGIN, columnsForWidth, isBackEvent, nextIndex } from './navigation';
+import { createPointerMovementTracker } from './pointerMovement';
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
@@ -26,6 +27,18 @@ export function MovieList() {
     });
   };
   const restoreFocus = useRef(false);
+  useEffect(() => {
+    if (!web) return;
+    const moved = createPointerMovementTracker();
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !moved(event.clientX, event.clientY)) return;
+      if (showDetails) return;
+      const card = refs.current.find(ref => (ref as unknown as HTMLElement | null)?.contains(event.target as Node));
+      (card as unknown as HTMLElement | undefined)?.focus();
+    };
+    window.addEventListener('pointermove', handlePointerMove);
+    return () => window.removeEventListener('pointermove', handlePointerMove);
+  }, [web, showDetails]);
   const movie = movies[selected];
   const closeDetails = useCallback(() => {
     restoreFocus.current = true;

@@ -13,9 +13,8 @@ export function MovieCard({ movie, active, onFocus, onSelect, width, cardRef }: 
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
       onFocus={onFocus} onPress={onSelect}
-      onHoverIn={event => {
-        onFocus();
-        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
+      onHoverIn={() => {
+        if (Platform.OS !== 'web') onFocus();
       }}
       style={[s.card, width !== undefined && { width }, Platform.OS === 'web' && s.pointer, active && s.active]}>
       <View style={[s.art, width !== undefined && s.responsiveArt]}>
