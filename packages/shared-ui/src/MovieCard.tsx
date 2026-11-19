@@ -3,8 +3,8 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import type { Movie } from './movies';
 import { CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, width, active, onFocus, onSelect, cardRef }: {
-  movie: Movie; width: number; active: boolean; onFocus: () => void; onSelect: () => void;
+export function MovieCard({ movie, width, artHeight, active, onFocus, onSelect, cardRef }: {
+  movie: Movie; width: number; artHeight: number; active: boolean; onFocus: () => void; onSelect: () => void;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
@@ -17,7 +17,7 @@ export function MovieCard({ movie, width, active, onFocus, onSelect, cardRef }: 
         if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
       }}
       style={[s.card, { width }, active && s.active]}>
-      <View style={s.art}>
+      <View style={[s.art, { height: artHeight }]}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
         <View style={s.score}><Text style={s.scoreText}>★ {movie.rating}</Text></View>

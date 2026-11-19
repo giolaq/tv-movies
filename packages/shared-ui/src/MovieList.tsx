@@ -7,7 +7,8 @@ import { columnsForWidth, isBackEvent, nextIndex } from './navigation';
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const compact = height < 900 || width < 1600;
   const safeX = Math.round(width * 0.05);
   const cardWidth = Math.min(320, width - safeX * 2 - 14);
   const [columns, setColumns] = useState(1);
@@ -43,8 +44,9 @@ export function MovieList() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const element = refs.current[selected] as unknown as HTMLElement | null;
-    element?.scrollIntoView({ block: 'nearest' });
-  }, [selected, showDetails]);
+    const frame = requestAnimationFrame(() => element?.scrollIntoView({ block: 'nearest' }));
+    return () => cancelAnimationFrame(frame);
+  }, [selected, showDetails, compact]);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (event: KeyboardEvent) => {
@@ -64,16 +66,9 @@ export function MovieList() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [selected, columns, showDetails, closeDetails]);
-  return (
-    <View style={[s.root, { paddingTop: 54, paddingBottom: 54 }]}>
-      <View style={[s.nav, { paddingHorizontal: safeX }]}>
-        <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
-        <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>
-        <Text style={s.profile}>F</Text>
-      </View>
-      {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
-      <View style={[s.collection, showDetails && { display: 'none' }]}>
-        <View style={[s.hero, { marginHorizontal: safeX }]}>
+  const header = (
+    <View>
+        <View style={[s.hero, { marginHorizontal: compact ? 7 : safeX }]}>
           <View style={s.heroCopy}>
             <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
             <Text style={s.headline}>A world worth watching.</Text>
@@ -87,14 +82,32 @@ export function MovieList() {
             <Text style={s.detailFoot}>A FRAME ORIGINAL  ↗</Text>
           </View>
         </View>
-        <View style={[s.collectionHead, { marginHorizontal: safeX }]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-      <ScrollView style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
+        <View style={[s.collectionHead, { marginHorizontal: compact ? 7 : safeX }]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
+    </View>
+  );
+  const gridContent = (
+    <View>
         <View style={s.grid} onLayout={event => {
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width, cardWidth));
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={selected === index} onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
+    </View>
+  );
+  return (
+    <View style={[s.root, { paddingTop: 54, paddingBottom: 54 }]}>
+      <View style={[s.nav, { paddingHorizontal: safeX }]}>
+        <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
+        <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>
+        <Text style={s.profile}>F</Text>
+      </View>
+      {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
+      <View style={[s.collection, showDetails && { display: 'none' }]}>
+        {!compact && header}
+      <ScrollView style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
+        {compact && header}
+        {gridContent}
       </ScrollView>
       </View>
       <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>
