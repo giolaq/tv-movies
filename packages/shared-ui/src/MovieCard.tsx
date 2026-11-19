@@ -25,7 +25,6 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
         <View style={s.score}><Text style={[s.scoreText, Platform.isTV && s.tvScore, web && s.webScoreText, narrow && s.narrowScoreText]}>★ {movie.rating}</Text></View>
-        <View style={[s.caption, Platform.isTV && s.tvCaption, web && s.webCaption, narrow && s.narrowCaption]}><Text numberOfLines={web ? 1 : undefined} style={[s.captionText, Platform.isTV && s.tvCaptionText, web && s.webCaptionText, narrow && s.narrowCaptionText]}>{movie.genre.toUpperCase()}</Text></View>
       </View>
       <Text numberOfLines={web ? (narrow ? 2 : 1) : undefined} style={[s.title, Platform.isTV && s.tvTitle, web && s.webTitle, narrow && s.narrowTitle]}>{movie.title}</Text>
       <Text style={[s.year, Platform.isTV && s.tvYear, web && s.webYear, narrow && s.narrowYear]}>{movie.year}  ·  {movie.genre}</Text>
@@ -39,13 +38,9 @@ const s = StyleSheet.create({
   pointer: { cursor: 'pointer' },
   responsiveArt: { height: undefined, aspectRatio: 2 / 3 },
   webScoreText: { fontSize: 16 },
-  webCaption: { padding: 8 },
-  webCaptionText: { fontSize: 12, letterSpacing: 1 },
   webTitle: { fontSize: 18, lineHeight: 24 },
   webYear: { fontSize: 14, lineHeight: 20 },
   narrowScoreText: { fontSize: 12 },
-  narrowCaption: { padding: 8 },
-  narrowCaptionText: { fontSize: 10, letterSpacing: 1 },
   narrowTitle: { fontSize: 16, lineHeight: 21 },
   narrowYear: { fontSize: 12, lineHeight: 17 },
   image: { width: '100%', height: '100%' },
@@ -54,13 +49,9 @@ const s = StyleSheet.create({
   fallbackLabel: { color: '#d9f99d', fontSize: 24, fontWeight: '500', marginTop: 15 },
   score: { position: 'absolute', top: 10, right: 8, backgroundColor: '#101815', padding: 5, borderRadius: 5 },
   scoreText: { color: '#e8f2d9', fontSize: 24, fontWeight: '700' },
-  caption: { position: 'absolute', bottom: 0, padding: 12, backgroundColor: '#0b131b', width: '100%' },
-  captionText: { color: '#fff', fontSize: 24, fontWeight: '500', letterSpacing: 2 },
   title: { color: '#f2f3ee', fontSize: 28, fontWeight: '600', marginTop: 12 },
   year: { color: '#96a29f', fontSize: 24, fontWeight: '500', marginTop: 5, marginBottom: 5 },
   tvScore: { fontSize: 12 },
-  tvCaption: { padding: 8 },
-  tvCaptionText: { fontSize: 11 },
   tvTitle: { fontSize: 16, marginTop: 8 },
   tvYear: { fontSize: 13 },
 });
