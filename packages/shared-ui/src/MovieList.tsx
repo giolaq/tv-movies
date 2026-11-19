@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, TVEventControl, View, useWindowDimensions } from 'react-native';
 import { MovieCard } from './MovieCard';
 import { MovieDetails } from './MovieDetails';
 import { movies } from './movies';
 import { columnsForWidth, isBackEvent, leavesGridTop, nextIndex } from './navigation';
+import { formatRuntime } from './runtime';
 
 const tabs = ['Discover', 'The collection'];
 type Zone = 'nav' | 'grid';
 const asElement = (ref: View | null) => ref as unknown as HTMLElement | null;
 
-export function MovieList() {
+type BackSource = { addEventListener: (event: 'hardwareBackPress', handler: () => boolean) => { remove: () => void } };
+
+export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSource } = {}) {
   const [selected, setSelected] = useState(0);
   const { width, height } = useWindowDimensions();
   const compact = height < 900 || width < 1600;
@@ -77,15 +80,16 @@ export function MovieList() {
   }, [showDetails, selected]);
   useEffect(() => {
     if (!showDetails || Platform.OS === 'web') return;
-    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+    const back = backHandler?.addEventListener('hardwareBackPress', () => {
       closeDetails();
       return true;
     });
-    const tv = TVEventHandler?.addListener?.(event => {
-      if (isBackEvent(event.eventType)) closeDetails();
-    });
-    return () => { back.remove(); tv?.remove(); };
-  }, [showDetails, closeDetails]);
+    if (Platform.OS === 'ios') TVEventControl?.enableTVMenuKey?.();
+    return () => {
+      back?.remove();
+      if (Platform.OS === 'ios') TVEventControl?.disableTVMenuKey?.();
+    };
+  }, [showDetails, closeDetails, backHandler]);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const element = refs.current[selected] as unknown as HTMLElement | null;
@@ -127,31 +131,27 @@ export function MovieList() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [selected, columns, tab, showDetails, closeDetails]);
-  const header = (
+  const header = movie ? (
     <View>
         <View style={[s.hero, { marginHorizontal: compact ? 7 : safeX }]}>
-          <View style={s.heroCopy}>
-            <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
-            <Text style={s.headline}>A world worth watching.</Text>
-            <Text style={s.subline}>Extraordinary stories. Unexpected perspectives. Find your next escape.</Text>
-          </View>
           <View style={s.detail} accessibilityLiveRegion="polite">
-            <Text style={s.detailKicker}>IN FOCUS  /  {String(selected + 1).padStart(2, '0')}</Text>
-            <Text style={s.detailTitle}>{movie.title}</Text>
-            <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {movie.genre}</Text>
-            <Text style={s.description}>{movie.description}</Text>
-            <Text style={s.detailFoot}>A FRAME ORIGINAL  ↗</Text>
+            <View style={s.focusHeading}>
+              <Text style={s.detailKicker}>IN FOCUS  /  {String(selected + 1).padStart(2, '0')}</Text>
+              <Text style={s.detailTitle}>{movie.title}</Text>
+              <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {formatRuntime(movie.runtime)}   ·   {movie.genre}</Text>
+            </View>
+            <Text numberOfLines={1} style={s.description}>{movie.description}</Text>
           </View>
         </View>
-        <View onLayout={event => { collectionY.current = event.nativeEvent.layout.y; }} style={[s.collectionHead, { marginHorizontal: compact ? 7 : safeX }]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
+        <View onLayout={event => { collectionY.current = event.nativeEvent.layout.y; }} style={[s.collectionHead, { marginHorizontal: compact ? 7 : safeX }]}><Text style={s.collectionTitle}>The collection</Text><Text style={s.count}>{movies.length} FILMS  /  HANDPICKED</Text></View>
     </View>
-  );
+  ) : <Text style={[s.collectionTitle, { marginHorizontal: safeX }]}>No movies available</Text>;
   const gridContent = (
     <View>
         <View style={s.grid} onLayout={event => {
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width, cardWidth));
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={zone === 'grid' && selected === index}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={Math.min(180, Math.round(height * 0.22))} active={zone === 'grid' && selected === index}
             preferred={index === 0} canHover={canHover} onFocus={() => { setZone('grid'); setSelected(index); }} onSelect={() => openDetails(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
@@ -177,7 +177,7 @@ export function MovieList() {
         </View>
         <Text style={s.profile}>F</Text>
       </View>
-      {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
+      {showDetails && movie && <MovieDetails movie={movie} onClose={closeDetails} />}
       <View style={[s.collection, showDetails && { display: 'none' }]}>
         {!compact && header}
       <ScrollView ref={scrollRef} style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
@@ -204,20 +204,15 @@ const s = StyleSheet.create({
   collection: { flex: 1, minHeight: 0 },
   scroller: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 20 },
-  hero: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingVertical: 16 },
-  heroCopy: { flexGrow: 1, flexBasis: 390, justifyContent: 'center' },
-  eyebrow: { color: '#d9f99d', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginBottom: 12 },
-  headline: { color: '#f0f2e9', fontSize: 52, fontWeight: '600', lineHeight: 58, letterSpacing: -2 },
-  subline: { color: '#9ba8aa', fontSize: 24, fontWeight: '500', marginTop: 12, maxWidth: 800, lineHeight: 34 },
-  detail: { flexBasis: 540, flexGrow: 1, maxWidth: 680, minHeight: 256, backgroundColor: '#172428', borderRadius: 12, borderWidth: 1, borderColor: '#2c3b3d', padding: 16, justifyContent: 'center' },
-  detailKicker: { color: '#b2ca98', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginBottom: 6 },
+  hero: { flexDirection: 'row', paddingVertical: 8 },
+  detail: { flex: 1, backgroundColor: '#172428', borderRadius: 12, borderWidth: 1, borderColor: '#2c3b3d', padding: 16 },
+  focusHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 20 },
+  detailKicker: { color: '#b2ca98', fontSize: 24, fontWeight: '500', letterSpacing: 2 },
   detailTitle: { color: '#f0f2e9', fontSize: 36, fontWeight: '600' },
-  metadata: { color: '#d4dfbf', fontSize: 24, fontWeight: '500', marginTop: 6 },
+  metadata: { color: '#d4dfbf', fontSize: 24, fontWeight: '500' },
   description: { color: '#acb8b7', lineHeight: 34, fontSize: 24, fontWeight: '500', marginTop: 6 },
-  detailFoot: { color: '#a8b89d', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginTop: 8 },
-  collectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginHorizontal: 7, marginBottom: 18 },
+  collectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginHorizontal: 7, marginBottom: 8 },
   collectionTitle: { color: '#f0f2e9', fontSize: 36, fontWeight: '600' },
-  collectionSub: { color: '#879698', fontSize: 24, fontWeight: '500', marginTop: 7 },
   count: { color: '#9ca99c', fontSize: 24, fontWeight: '500', letterSpacing: 1.5 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   footer: { color: '#a0afa9', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginTop: 35, marginLeft: 7 },
