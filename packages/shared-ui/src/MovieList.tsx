@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
 import { MovieCard } from './MovieCard';
+import { MovieDetails } from './MovieDetails';
 import { movies } from './movies';
-import { nextIndex } from './navigation';
+import { CARD_MARGIN, columnsForWidth, isBackEvent, nextIndex } from './navigation';
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
@@ -10,8 +11,9 @@ export function MovieList() {
   const web = Platform.OS === 'web';
   const narrow = web && width < 600;
   const [gridWidth, setGridWidth] = useState(0);
-  const columns = web ? Math.max(2, Math.floor(gridWidth / 198)) : Math.max(1, Math.floor((width - 80) / 198));
-  const cardWidth = web && gridWidth ? gridWidth / columns - 14 : undefined;
+  const columns = Math.max(web ? 2 : 1, columnsForWidth(gridWidth));
+  const cardWidth = web && gridWidth ? gridWidth / columns - 2 * CARD_MARGIN : undefined;
+  const [showDetails, setShowDetails] = useState(false);
   const refs = useRef<(View | null)[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const detailRef = useRef<View>(null);
@@ -27,10 +29,43 @@ export function MovieList() {
       element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
   };
+  const restoreFocus = useRef(false);
   const movie = movies[selected];
+  const closeDetails = useCallback(() => {
+    restoreFocus.current = true;
+    setShowDetails(false);
+  }, []);
+  useEffect(() => {
+    if (showDetails || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    const frame = requestAnimationFrame(() => {
+      const card = refs.current[selected];
+      if (Platform.OS === 'web') (card as unknown as HTMLElement | null)?.focus();
+      else card?.setNativeProps({ hasTVPreferredFocus: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [showDetails, selected]);
+  useEffect(() => {
+    if (!showDetails || Platform.OS === 'web') return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeDetails();
+      return true;
+    });
+    const tv = TVEventHandler?.addListener?.(event => {
+      if (isBackEvent(event.eventType)) closeDetails();
+    });
+    return () => { back.remove(); tv?.remove(); };
+  }, [showDetails, closeDetails]);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (event: KeyboardEvent) => {
+      if (showDetails) {
+        if (isBackEvent(event.key)) {
+          event.preventDefault();
+          closeDetails();
+        }
+        return;
+      }
       if (!event.key.startsWith('Arrow')) return;
       event.preventDefault();
       const next = nextIndex(selected, event.key, movies.length, columns);
@@ -40,7 +75,7 @@ export function MovieList() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selected, columns]);
+  }, [selected, columns, showDetails, closeDetails]);
   return (
     <View style={s.root}>
       <View style={[s.nav, narrow && s.narrowNav]}>
@@ -58,7 +93,8 @@ export function MovieList() {
         </View>}
         <Text style={s.profile}>F</Text>
       </View>
-      <ScrollView ref={scrollRef} contentContainerStyle={[s.content, narrow && s.narrowContent]}>
+      {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
+      <ScrollView ref={scrollRef} style={showDetails ? { display: 'none' } : undefined} contentContainerStyle={[s.content, narrow && s.narrowContent]}>
         <View style={[s.hero, narrow && s.narrowHero]}>
           <View style={[s.heroCopy, narrow && s.narrowHeroCopy]}>
             <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
@@ -74,8 +110,10 @@ export function MovieList() {
           </View>
         </View>
         <View ref={collectionRef} style={[s.collectionHead, narrow && s.narrowCollectionHead]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-        <View style={s.grid} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onPress={scrollToDetail} cardRef={ref => { refs.current[index] = ref; }} />)}
+        <View style={s.grid} onLayout={event => {
+          if (event.nativeEvent.layout.width > 0) setGridWidth(event.nativeEvent.layout.width);
+        }}>
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onPress={scrollToDetail} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
       </ScrollView>
