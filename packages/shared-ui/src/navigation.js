@@ -16,3 +16,7 @@ export function nextIndex(index, key, count, columns) {
 export function isBackEvent(key) {
   return ['Escape', 'Backspace', 'hardwareBackPress', 'menu', 'back'].includes(key);
 }
+
+export function leavesGridTop(index, key, columns) {
+  return key === 'ArrowUp' && index < columns;
+}

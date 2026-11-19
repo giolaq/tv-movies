@@ -3,16 +3,18 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import type { Movie } from './movies';
 import { CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, width, artHeight, active, onFocus, onSelect, cardRef }: {
-  movie: Movie; width: number; artHeight: number; active: boolean; onFocus: () => void; onSelect: () => void;
+export function MovieCard({ movie, width, artHeight, active, preferred, onFocus, onSelect, canHover, cardRef }: {
+  movie: Movie; width: number; artHeight: number; active: boolean; preferred: boolean; onFocus: () => void; onSelect: () => void;
+  canHover: () => boolean;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={onSelect}
+      hasTVPreferredFocus={preferred} onFocus={onFocus} onPress={onSelect}
       onHoverIn={event => {
+        if (!canHover()) return;
         onFocus();
         if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
       }}
