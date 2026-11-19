@@ -190,7 +190,7 @@ export function MovieList() {
         {gridContent}
       </ScrollView>
       </View>
-      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Move</Text><Text style={s.helpText}>{showDetails ? 'BACK  Return to the collection' : 'OK  Open details    ·    ↑ from the top row  Menu'}</Text></View>
+      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Move</Text><Text style={s.helpText}>{showDetails ? (narrow ? 'BACK  Collection' : 'BACK  Return to the collection') : (narrow ? 'OK  Details  ·  ↑  Menu' : 'OK  Open details    ·    ↑ from the top row  Menu')}</Text></View>
     </View>
   );
 }
