@@ -10,7 +10,7 @@ export function MovieList() {
   const { width, height } = useWindowDimensions();
   const compact = height < 900 || width < 1600;
   const safeX = Math.round(width * 0.05);
-  const cardWidth = Math.min(320, width - safeX * 2 - 14);
+  const cardWidth = Math.min(Platform.isTV ? 200 : 320, width - safeX * 2 - 14);
   const [columns, setColumns] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const refs = useRef<(View | null)[]>([]);
@@ -102,7 +102,7 @@ export function MovieList() {
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width, cardWidth));
           revealTVCard();
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={selected === index} onFocus={() => {
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={Platform.isTV ? Math.min(220, Math.round(height * 0.4)) : compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={selected === index} onFocus={() => {
             if (Platform.isTV && (showDetails || (pendingTVFocus.current !== null && pendingTVFocus.current !== index))) return;
             pendingTVFocus.current = null;
             setSelected(index);
@@ -112,11 +112,11 @@ export function MovieList() {
     </View>
   );
   return (
-    <View style={[s.root, { paddingTop: 54, paddingBottom: 54 }]}>
-      <View style={[s.nav, { paddingHorizontal: safeX }]}>
-        <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
-        <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>
-        <Text style={s.profile}>F</Text>
+    <View style={[s.root, { paddingTop: Platform.isTV ? 20 : 54, paddingBottom: Platform.isTV ? 20 : 54 }]}>
+      <View style={[s.nav, { paddingHorizontal: safeX }, Platform.isTV && s.tvNav]}>
+        <Text style={[s.brand, Platform.isTV && s.tvBrand]}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
+        <View style={s.tabs}><Text style={[s.tabActive, Platform.isTV && s.tvNavText]}>Discover</Text><Text style={[s.tab, Platform.isTV && s.tvNavText]}>The collection</Text></View>
+        <Text style={[s.profile, Platform.isTV && s.tvNavText]}>F</Text>
       </View>
       {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
       {(!showDetails || !Platform.isTV) && <View style={[s.collection, showDetails && { display: 'none' }]}>
@@ -126,7 +126,7 @@ export function MovieList() {
         {gridContent}
       </ScrollView>
       </View>}
-      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>
+      <View style={[s.help, { paddingHorizontal: safeX }, Platform.isTV && s.tvHelp]}>{Platform.isTV ? <Text style={s.tvHelpText}>↑ ↓ ← →  Explore    ·    OK  Details    ·    BACK  Collection</Text> : <><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></>}</View>
     </View>
   );
 }
@@ -161,4 +161,9 @@ const s = StyleSheet.create({
   footer: { color: '#a0afa9', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginTop: 35, marginLeft: 7 },
   help: { paddingVertical: 13, paddingHorizontal: 40, borderTopWidth: 1, borderColor: '#263035', flexDirection: 'row', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' },
   helpText: { color: '#a0afa9', fontSize: 24, fontWeight: '500' },
+  tvNav: { height: 56, gap: 40 },
+  tvBrand: { fontSize: 22 },
+  tvNavText: { fontSize: 16 },
+  tvHelp: { paddingVertical: 8, flexWrap: 'nowrap' },
+  tvHelpText: { color: '#a0afa9', fontSize: 14 },
 });
