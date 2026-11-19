@@ -1,8 +1,8 @@
-export const CARD_WIDTH = 260;
-export const CARD_MARGIN = 10;
+export const CARD_WIDTH = 184;
+export const CARD_MARGIN = 7;
 
-export function columnsForWidth(width) {
-  return Math.max(1, Math.floor(width / (CARD_WIDTH + 2 * CARD_MARGIN)));
+export function columnsForWidth(width, cardWidth = CARD_WIDTH) {
+  return Math.max(1, Math.floor(width / (cardWidth + 2 * CARD_MARGIN)));
 }
 
 export function nextIndex(index, key, count, columns) {
@@ -15,4 +15,8 @@ export function nextIndex(index, key, count, columns) {
 
 export function isBackEvent(key) {
   return ['Escape', 'Backspace', 'hardwareBackPress', 'menu', 'back'].includes(key);
+}
+
+export function leavesGridTop(index, key, columns) {
+  return key === 'ArrowUp' && index < columns;
 }

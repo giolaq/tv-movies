@@ -7,11 +7,11 @@ test('measured grid width determines columns at exact wrapping boundaries', asyn
   assert.equal(columnsForWidth(footprint - 1), 1);
   assert.equal(columnsForWidth(4 * footprint - 0.01), 3);
   assert.equal(columnsForWidth(4 * footprint), 4);
-  assert.equal(columnsForWidth(4 * footprint + 6), 4);
-  assert.equal(columnsForWidth(4 * footprint + 6 - 15), 3);
-  assert.equal(nextIndex(0, 'ArrowDown', 20, columnsForWidth(4 * footprint + 6)), 4);
-  assert.equal(nextIndex(4, 'ArrowUp', 20, columnsForWidth(4 * footprint + 6)), 0);
-  assert.equal(nextIndex(0, 'ArrowDown', 20, columnsForWidth(4 * footprint - 9)), 3);
+  assert.equal(columnsForWidth(864 - 66), 4);
+  assert.equal(columnsForWidth(864 - 66 - 15), 3);
+  assert.equal(nextIndex(0, 'ArrowDown', 20, columnsForWidth(798)), 4);
+  assert.equal(nextIndex(4, 'ArrowUp', 20, columnsForWidth(798)), 0);
+  assert.equal(nextIndex(0, 'ArrowDown', 20, columnsForWidth(783)), 3);
 });
 
 test('arrows navigate a grid and clamp edges', async () => {
@@ -51,4 +51,11 @@ test('details dismissal recognizes web and TV back events only', async () => {
   for (const key of ['Enter', 'select', 'ArrowDown', '', undefined]) {
     assert.equal(isBackEvent(key), false);
   }
+});
+
+test('up from the top row leaves the grid', async () => {
+  const { leavesGridTop } = await import('../src/navigation.js');
+  assert.equal(leavesGridTop(3, 'ArrowUp', 4), true);
+  assert.equal(leavesGridTop(4, 'ArrowUp', 4), false);
+  assert.equal(leavesGridTop(0, 'ArrowLeft', 4), false);
 });
