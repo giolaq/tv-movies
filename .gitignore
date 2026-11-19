@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+dist/
+apps/expo-multi-tv/android/
+apps/expo-multi-tv/ios/
+apps/vega/build/
+apps/vega/buildinfo.json
+*.log
+.DS_Store
