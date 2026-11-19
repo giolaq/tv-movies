@@ -3,7 +3,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const root = path.resolve(__dirname, '../..');
 const local = name => path.dirname(require.resolve(name + '/package.json', { paths: [__dirname] }));
 module.exports = mergeConfig(getDefaultConfig(__dirname), {
-  watchFolders: [path.join(root, 'packages/shared-ui')],
+  watchFolders: [path.join(root, 'packages/shared-ui'), path.join(root, 'node_modules')],
   resolver: {
     unstable_enableSymlinks: true,
     nodeModulesPaths: [path.join(__dirname, 'node_modules'), path.join(root, 'node_modules')],
