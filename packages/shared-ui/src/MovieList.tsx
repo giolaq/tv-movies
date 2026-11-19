@@ -17,7 +17,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
   const { width, height } = useWindowDimensions();
   const compact = height < 900 || width < 1600;
   const safeX = Math.round(width * 0.05);
-  const cardWidth = Math.min(320, width - safeX * 2 - 14);
+  const cardWidth = Math.min(Platform.isTV ? 200 : 320, width - safeX * 2 - 14);
   const [columns, setColumns] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
   const [zone, setZone] = useState<Zone>('grid');
@@ -27,11 +27,14 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
   const tabRefs = useRef<(View | null)[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const collectionY = useRef(0);
+  const contentRef = useRef<View>(null!);
+  const pendingTVFocus = useRef<number | null>(0);
   const restoreFocus = useRef(false);
   const usingRemote = useRef(true);
   const canHover = useCallback(() => !usingRemote.current, []);
   const movie = movies[selected];
   const openDetails = (index: number) => {
+    pendingTVFocus.current = index;
     setSelected(index);
     setShowDetails(true);
     if (Platform.OS === 'web') window.history.pushState({ detail: movies[index].id }, '');
@@ -44,6 +47,12 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
     if (Platform.OS === 'web' && window.history.state?.detail) window.history.back();
     else dismissDetails();
   }, [dismissDetails]);
+  const revealTVCard = () => {
+    if (!Platform.isTV || !contentRef.current) return;
+    refs.current[selected]?.measureLayout(contentRef.current, (_x, y) => {
+      scrollRef.current?.scrollTo({ y: y - 10, animated: false });
+    }, () => {});
+  };
   const selectTab = (index: number) => {
     setTab(index);
     scrollRef.current?.scrollTo({ y: index === 1 && compact ? collectionY.current : 0, animated: true });
@@ -74,7 +83,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
     const frame = requestAnimationFrame(() => {
       const card = refs.current[selected];
       if (Platform.OS === 'web') (card as unknown as HTMLElement | null)?.focus();
-      else card?.setNativeProps({ hasTVPreferredFocus: true });
+      else if (!Platform.isTV) card?.setNativeProps({ hasTVPreferredFocus: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [showDetails, selected]);
@@ -150,20 +159,26 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
     <View>
         <View style={s.grid} onLayout={event => {
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width, cardWidth));
+          revealTVCard();
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={Math.min(180, Math.round(height * 0.22))} active={zone === 'grid' && selected === index}
-            preferred={index === 0} canHover={canHover} onFocus={() => { setZone('grid'); setSelected(index); }} onSelect={() => openDetails(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={Platform.isTV ? Math.min(220, Math.round(height * 0.4)) : Math.min(180, Math.round(height * 0.22))} active={zone === 'grid' && selected === index}
+            preferred={Platform.isTV ? selected === index : index === 0} canHover={canHover} onFocus={() => {
+              if (Platform.isTV && (showDetails || (pendingTVFocus.current !== null && pendingTVFocus.current !== index))) return;
+              pendingTVFocus.current = null;
+              setZone('grid');
+              setSelected(index);
+            }} onSelect={() => openDetails(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
     </View>
   );
   return (
-    <View style={[s.root, { paddingTop: 54, paddingBottom: 54 }]}>
-      <View style={[s.nav, { paddingHorizontal: safeX }]}>
-        <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
+    <View style={[s.root, { paddingTop: Platform.isTV ? 20 : 54, paddingBottom: Platform.isTV ? 20 : 54 }]}>
+      <View style={[s.nav, { paddingHorizontal: safeX }, Platform.isTV && s.tvNav]}>
+        <Text style={[s.brand, Platform.isTV && s.tvBrand]}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
         <View style={s.tabs}>
           {tabs.map((label, index) => {
-            const text = <Text style={[s.tab, tab === index && s.tabActive, !showDetails && zone === 'nav' && focusedTab === index && s.tabTextFocused]}>{label}</Text>;
+            const text = <Text style={[s.tab, tab === index && s.tabActive, !showDetails && zone === 'nav' && focusedTab === index && s.tabTextFocused, Platform.isTV && s.tvNavText]}>{label}</Text>;
             if (showDetails) return <View key={label} style={s.tabButton}>{text}</View>;
             return (
               <Pressable key={label} ref={ref => { tabRefs.current[index] = ref; }} accessibilityRole="tab"
@@ -175,17 +190,17 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
             );
           })}
         </View>
-        <Text style={s.profile}>F</Text>
+        <Text style={[s.profile, Platform.isTV && s.tvNavText]}>F</Text>
       </View>
       {showDetails && movie && <MovieDetails movie={movie} onClose={closeDetails} />}
-      <View style={[s.collection, showDetails && { display: 'none' }]}>
+      {(!showDetails || !Platform.isTV) && <View style={[s.collection, showDetails && { display: 'none' }]}>
         {!compact && header}
-      <ScrollView ref={scrollRef} style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
+      <ScrollView ref={scrollRef} innerViewRef={contentRef} onContentSizeChange={revealTVCard} style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
         {compact && header}
         {gridContent}
       </ScrollView>
-      </View>
-      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Move</Text><Text style={s.helpText}>{showDetails ? 'BACK  Return to the collection' : 'OK  Open details    ·    ↑ from the top row  Menu'}</Text></View>
+      </View>}
+      <View style={[s.help, { paddingHorizontal: safeX }, Platform.isTV && s.tvHelp]}>{Platform.isTV ? <Text style={s.tvHelpText}>↑ ↓ ← →  Explore    ·    OK  Details    ·    BACK  Collection</Text> : <><Text style={s.helpText}>↑ ↓ ← →  Move</Text><Text style={s.helpText}>{showDetails ? 'BACK  Return to the collection' : 'OK  Open details    ·    ↑ from the top row  Menu'}</Text></>}</View>
     </View>
   );
 }
@@ -218,4 +233,9 @@ const s = StyleSheet.create({
   footer: { color: '#a0afa9', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginTop: 35, marginLeft: 7 },
   help: { paddingVertical: 13, paddingHorizontal: 40, borderTopWidth: 1, borderColor: '#263035', flexDirection: 'row', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' },
   helpText: { color: '#a0afa9', fontSize: 24, fontWeight: '500' },
+  tvNav: { height: 56, gap: 40 },
+  tvBrand: { fontSize: 22 },
+  tvNavText: { fontSize: 16 },
+  tvHelp: { paddingVertical: 8, flexWrap: 'nowrap' },
+  tvHelpText: { color: '#a0afa9', fontSize: 14 },
 });
