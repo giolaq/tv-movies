@@ -1,17 +1,21 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
 import { CARD_WIDTH, CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, active, onFocus, cardRef }: {
-  movie: Movie; active: boolean; onFocus: () => void;
+export function MovieCard({ movie, active, onFocus, onSelect, cardRef }: {
+  movie: Movie; active: boolean; onFocus: () => void; onSelect: () => void;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={onFocus}
+      onFocus={onFocus} onPress={onSelect}
+      onHoverIn={event => {
+        onFocus();
+        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
+      }}
       style={[s.card, active && s.active]}>
       <View style={s.art}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>

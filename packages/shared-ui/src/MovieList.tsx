@@ -1,17 +1,52 @@
-import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Platform, ScrollView, StyleSheet, Text, TVEventHandler, View } from 'react-native';
 import { MovieCard } from './MovieCard';
+import { MovieDetails } from './MovieDetails';
 import { movies } from './movies';
-import { columnsForWidth, nextIndex } from './navigation';
+import { columnsForWidth, isBackEvent, nextIndex } from './navigation';
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
   const [columns, setColumns] = useState(1);
+  const [showDetails, setShowDetails] = useState(false);
   const refs = useRef<(View | null)[]>([]);
+  const restoreFocus = useRef(false);
   const movie = movies[selected];
+  const closeDetails = useCallback(() => {
+    restoreFocus.current = true;
+    setShowDetails(false);
+  }, []);
+  useEffect(() => {
+    if (showDetails || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    const frame = requestAnimationFrame(() => {
+      const card = refs.current[selected];
+      if (Platform.OS === 'web') (card as unknown as HTMLElement | null)?.focus();
+      else card?.setNativeProps({ hasTVPreferredFocus: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [showDetails, selected]);
+  useEffect(() => {
+    if (!showDetails || Platform.OS === 'web') return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeDetails();
+      return true;
+    });
+    const tv = TVEventHandler?.addListener?.(event => {
+      if (isBackEvent(event.eventType)) closeDetails();
+    });
+    return () => { back.remove(); tv?.remove(); };
+  }, [showDetails, closeDetails]);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (event: KeyboardEvent) => {
+      if (showDetails) {
+        if (isBackEvent(event.key)) {
+          event.preventDefault();
+          closeDetails();
+        }
+        return;
+      }
       if (!event.key.startsWith('Arrow')) return;
       event.preventDefault();
       const next = nextIndex(selected, event.key, movies.length, columns);
@@ -21,7 +56,7 @@ export function MovieList() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [selected, columns]);
+  }, [selected, columns, showDetails, closeDetails]);
   return (
     <View style={s.root}>
       <View style={s.nav}>
@@ -29,7 +64,8 @@ export function MovieList() {
         <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>
         <Text style={s.profile}>F</Text>
       </View>
-      <ScrollView contentContainerStyle={s.content}>
+      {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
+      <ScrollView style={showDetails ? { display: 'none' } : undefined} contentContainerStyle={s.content}>
         <View style={s.hero}>
           <View style={s.heroCopy}>
             <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
@@ -45,8 +81,10 @@ export function MovieList() {
           </View>
         </View>
         <View style={s.collectionHead}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-        <View style={s.grid} onLayout={event => setColumns(columnsForWidth(event.nativeEvent.layout.width))}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => setSelected(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
+        <View style={s.grid} onLayout={event => {
+          if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width));
+        }}>
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
       </ScrollView>

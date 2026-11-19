@@ -28,3 +28,27 @@ test('empty lists and unsupported keys are safe', async () => {
   assert.equal(nextIndex(0, 'ArrowRight', 0, 4), -1);
   assert.equal(nextIndex(2, 'Escape', 20, 4), 2);
 });
+
+test('horizontal arrows stop at row edges including partial and single-column rows', async () => {
+  const { nextIndex } = await import('../src/navigation.js');
+  for (const columns of [1, 3, 4, 6]) {
+    for (let index = 0; index < 20; index++) {
+      const left = nextIndex(index, 'ArrowLeft', 20, columns);
+      const right = nextIndex(index, 'ArrowRight', 20, columns);
+      assert.equal(Math.floor(left / columns), Math.floor(index / columns));
+      assert.equal(Math.floor(right / columns), Math.floor(index / columns));
+      assert.equal(left, index % columns === 0 ? index : index - 1);
+      assert.equal(right, (index + 1) % columns === 0 || index === 19 ? index : index + 1);
+    }
+  }
+});
+
+test('details dismissal recognizes web and TV back events only', async () => {
+  const { isBackEvent } = await import('../src/navigation.js');
+  for (const key of ['Escape', 'Backspace', 'hardwareBackPress', 'menu', 'back']) {
+    assert.equal(isBackEvent(key), true);
+  }
+  for (const key of ['Enter', 'select', 'ArrowDown', '', undefined]) {
+    assert.equal(isBackEvent(key), false);
+  }
+});

@@ -7,6 +7,12 @@ export function columnsForWidth(width) {
 
 export function nextIndex(index, key, count, columns) {
   if (!count) return -1;
+  if (key === 'ArrowRight' && (index + 1) % columns === 0) return index;
+  if (key === 'ArrowLeft' && index % columns === 0) return index;
   const offsets = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: columns, ArrowUp: -columns };
   return Math.max(0, Math.min(count - 1, index + (offsets[key] || 0)));
+}
+
+export function isBackEvent(key) {
+  return ['Escape', 'Backspace', 'hardwareBackPress', 'menu', 'back'].includes(key);
 }
