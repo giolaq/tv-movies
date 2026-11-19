@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { Movie } from './movies';
+import { formatRuntime } from './runtime';
 
 export function MovieDetails({ movie, onClose }: { movie: Movie; onClose: () => void }) {
   const { width } = useWindowDimensions();
@@ -23,7 +24,7 @@ export function MovieDetails({ movie, onClose }: { movie: Movie; onClose: () => 
         <View style={s.copy}>
           <Text style={s.kicker}>FRAME ORIGINAL / MOVIE DETAILS</Text>
           <Text accessibilityRole="header" style={s.title}>{movie.title}</Text>
-          <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {movie.genre}</Text>
+          <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {formatRuntime(movie.runtime)}   ·   {movie.genre}</Text>
           <Text style={s.description}>{movie.description}</Text>
           <Text style={s.hint}>ESC / BACKSPACE / REMOTE BACK TO RETURN</Text>
         </View>
