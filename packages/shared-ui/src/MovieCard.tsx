@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
+import { CARD_WIDTH, CARD_MARGIN } from './navigation';
 
 type PosterState = 'loading' | 'loaded' | 'failed';
 
-export function MovieCard({ movie, active, onFocus, cardRef }: {
-  movie: Movie; active: boolean; onFocus: () => void;
+export function MovieCard({ movie, active, onFocus, onSelect, cardRef }: {
+  movie: Movie; active: boolean; onFocus: () => void; onSelect: () => void;
   cardRef: (ref: View | null) => void;
 }) {
   const [poster, setPoster] = useState<PosterState>('loading');
@@ -17,7 +18,11 @@ export function MovieCard({ movie, active, onFocus, cardRef }: {
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={onFocus}
+      onFocus={onFocus} onPress={onSelect}
+      onHoverIn={event => {
+        onFocus();
+        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
+      }}
       style={[s.card, active && s.active]}>
       <View style={s.art}>
         {poster !== 'loaded' && (
@@ -39,7 +44,7 @@ export function MovieCard({ movie, active, onFocus, cardRef }: {
   );
 }
 const s = StyleSheet.create({
-  card: { width: 184, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: 7 },
+  card: { width: CARD_WIDTH, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: CARD_MARGIN },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26', transform: [{ scale: 1.025 }] },
   art: { height: 235, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   image: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
