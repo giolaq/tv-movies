@@ -23,7 +23,6 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
         <View style={s.score}><Text style={s.scoreText}>★ {movie.rating}</Text></View>
-        <View style={s.caption}><Text style={s.captionText}>{movie.genre.toUpperCase()}</Text></View>
       </View>
       <Text style={s.title}>{movie.title}</Text>
       <Text style={s.year}>{movie.year}  ·  {movie.genre}</Text>
@@ -40,8 +39,6 @@ const s = StyleSheet.create({
   fallbackLabel: { color: '#d9f99d', fontSize: 24, fontWeight: '500', marginTop: 15 },
   score: { position: 'absolute', top: 10, right: 8, backgroundColor: '#101815', padding: 5, borderRadius: 5 },
   scoreText: { color: '#e8f2d9', fontSize: 24, fontWeight: '700' },
-  caption: { position: 'absolute', bottom: 0, padding: 12, backgroundColor: '#0b131b', width: '100%' },
-  captionText: { color: '#fff', fontSize: 24, fontWeight: '500', letterSpacing: 2 },
   title: { color: '#f2f3ee', fontSize: 28, fontWeight: '600', marginTop: 12 },
   year: { color: '#96a29f', fontSize: 24, fontWeight: '500', marginTop: 5, marginBottom: 5 },
 });
