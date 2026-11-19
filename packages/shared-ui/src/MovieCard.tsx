@@ -37,11 +37,11 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
           <Animated.Image source={{ uri: movie.poster }} accessibilityIgnoresInvertColors
             style={[s.image, { opacity }]} onLoad={onLoad} onError={() => setPoster('failed')} />
         )}
-        <View style={s.score}><Text style={s.scoreText}>★ {movie.rating}</Text></View>
-        <View style={s.caption}><Text style={s.captionText}>{movie.genre.toUpperCase()}</Text></View>
+        <View style={s.score}><Text style={[s.scoreText, Platform.isTV && s.tvScore]}>★ {movie.rating}</Text></View>
+        <View style={[s.caption, Platform.isTV && s.tvCaption]}><Text style={[s.captionText, Platform.isTV && s.tvCaptionText]}>{movie.genre.toUpperCase()}</Text></View>
       </View>
-      <Text style={s.title}>{movie.title}</Text>
-      <Text style={s.year}>{movie.year}  ·  {movie.genre}</Text>
+      <Text style={[s.title, Platform.isTV && s.tvTitle]}>{movie.title}</Text>
+      <Text style={[s.year, Platform.isTV && s.tvYear]}>{movie.year}  ·  {movie.genre}</Text>
     </Pressable>
   );
 }
@@ -60,4 +60,9 @@ const s = StyleSheet.create({
   captionText: { color: '#fff', fontSize: 24, fontWeight: '500', letterSpacing: 2 },
   title: { color: '#f2f3ee', fontSize: 28, fontWeight: '600', marginTop: 12 },
   year: { color: '#96a29f', fontSize: 24, fontWeight: '500', marginTop: 5, marginBottom: 5 },
+  tvScore: { fontSize: 12 },
+  tvCaption: { padding: 8 },
+  tvCaptionText: { fontSize: 11 },
+  tvTitle: { fontSize: 16, marginTop: 8 },
+  tvYear: { fontSize: 13 },
 });
