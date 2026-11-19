@@ -1,2 +1,4 @@
 import { MovieList } from '@tv/shared-ui';
-export default MovieList;
+export default function App() {
+  return <MovieList />;
+}
