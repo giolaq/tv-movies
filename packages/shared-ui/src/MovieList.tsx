@@ -50,7 +50,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
   }, [details]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || !details) return;
     const subscription = backHandler?.addEventListener('hardwareBackPress', () => {
       closeDetails();
       return true;
@@ -60,7 +60,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
       subscription?.remove();
       if (Platform.OS === 'ios') TVEventControl?.disableTVMenuKey?.();
     };
-  }, [backHandler, closeDetails]);
+  }, [backHandler, closeDetails, details]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
