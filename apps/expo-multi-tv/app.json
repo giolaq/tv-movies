@@ -21,6 +21,7 @@
       [
         "@react-native-tvos/config-tv",
         {
+          "androidTVRequired": false,
           "androidTVBanner": "./assets/tv-banner.png"
         }
       ]
