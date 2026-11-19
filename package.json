@@ -1,0 +1,19 @@
+{
+  "name": "tv-movies",
+  "private": true,
+  "packageManager": "yarn@1.22.22",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "web": "yarn workspace @tv/expo web",
+    "export:web": "yarn workspace @tv/expo export:web",
+    "typecheck": "yarn workspace @tv/shared-ui typecheck && yarn workspace @tv/expo typecheck",
+    "android": "yarn workspace @tv/expo android",
+    "ios": "yarn workspace @tv/expo ios",
+    "test": "node --test packages/shared-ui/test/*.test.cjs",
+    "vega": "yarn workspace @tv/vega start",
+    "build:vega": "yarn workspace @tv/vega build"
+  }
+}

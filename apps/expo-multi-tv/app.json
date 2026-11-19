@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "Frame / Movies",
+    "slug": "frame-movies",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "com.frame.movies"
+    },
+    "android": {
+      "package": "com.frame.movies"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "Frame — Movie collection"
+    },
+    "plugins": [
+      [
+        "@react-native-tvos/config-tv",
+        {
+          "androidTVBanner": "./assets/tv-banner.png"
+        }
+      ]
+    ]
+  }
+}

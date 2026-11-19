@@ -1,0 +1,27 @@
+{
+  "name": "@tv/expo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "web": "expo start --web",
+    "export:web": "expo export --platform web",
+    "typecheck": "tsc --noEmit",
+    "android": "EXPO_TV=1 expo run:android",
+    "ios": "EXPO_TV=1 expo run:ios"
+  },
+  "dependencies": {
+    "@tv/shared-ui": "1.0.0",
+    "expo": "~54.0.38",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "npm:react-native-tvos@0.81.5-2",
+    "react-native-web": "^0.21.0",
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-tvos/config-tv": "0.1.7"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2",
+    "@types/react": "~19.1.10"
+  }
+}

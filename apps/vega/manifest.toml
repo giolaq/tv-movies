@@ -1,0 +1,31 @@
+schema-version = 1
+
+[package]
+title = "Frame Movies"
+version = "1.0.0"
+id = "com.frame.movies"
+
+[os.version]
+min = "2.0"
+target = "2.0"
+
+[[components.interactive]]
+id = "com.frame.movies.main"
+runtime-module = "/com.amazon.kepler.runtime.react_native_kepler_4@IReactNativeKepler_0"
+launch-type = "singleton"
+categories = ["com.amazon.category.main"]
+
+[[processes.group]]
+component-ids = ["com.frame.movies.main"]
+
+[[wants.service]]
+id = "com.amazon.inputd.service"
+
+[[wants.service]]
+id = "com.amazon.network.service"
+
+[[needs.privilege]]
+id = "com.amazon.network.privilege.net-info"
+
+[[offers.interaction]]
+id = "com.frame.movies.main"
