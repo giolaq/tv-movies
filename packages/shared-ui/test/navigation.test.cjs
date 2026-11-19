@@ -52,3 +52,10 @@ test('details dismissal recognizes web and TV back events only', async () => {
     assert.equal(isBackEvent(key), false);
   }
 });
+
+test('up from the top row leaves the grid', async () => {
+  const { leavesGridTop } = await import('../src/navigation.js');
+  assert.equal(leavesGridTop(3, 'ArrowUp', 4), true);
+  assert.equal(leavesGridTop(4, 'ArrowUp', 4), false);
+  assert.equal(leavesGridTop(0, 'ArrowLeft', 4), false);
+});

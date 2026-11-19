@@ -1,30 +1,71 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Platform, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, TVEventHandler, View, useWindowDimensions } from 'react-native';
 import { MovieCard } from './MovieCard';
 import { MovieDetails } from './MovieDetails';
 import { movies } from './movies';
-import { columnsForWidth, isBackEvent, nextIndex } from './navigation';
+import { columnsForWidth, isBackEvent, leavesGridTop, nextIndex } from './navigation';
+
+const tabs = ['Discover', 'The collection'];
+type Zone = 'nav' | 'grid';
+const asElement = (ref: View | null) => ref as unknown as HTMLElement | null;
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
-  const selectedRef = useRef(0);
   const { width, height } = useWindowDimensions();
   const compact = height < 900 || width < 1600;
+  const narrow = width < 600;
   const safeX = Math.round(width * 0.05);
   const cardWidth = Math.min(320, width - safeX * 2 - 14);
   const [columns, setColumns] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
+  const [zone, setZone] = useState<Zone>('grid');
+  const [tab, setTab] = useState(0);
+  const [focusedTab, setFocusedTab] = useState(0);
   const refs = useRef<(View | null)[]>([]);
+  const tabRefs = useRef<(View | null)[]>([]);
+  const scrollRef = useRef<ScrollView>(null);
+  const collectionY = useRef(0);
   const restoreFocus = useRef(false);
+  const usingRemote = useRef(true);
+  const canHover = useCallback(() => !usingRemote.current, []);
   const movie = movies[selected];
-  const select = useCallback((index: number) => {
-    selectedRef.current = index;
+  const openDetails = (index: number) => {
     setSelected(index);
-  }, []);
-  const closeDetails = useCallback(() => {
+    setShowDetails(true);
+    if (Platform.OS === 'web') window.history.pushState({ detail: movies[index].id }, '');
+  };
+  const dismissDetails = useCallback(() => {
     restoreFocus.current = true;
     setShowDetails(false);
   }, []);
+  const closeDetails = useCallback(() => {
+    if (Platform.OS === 'web' && window.history.state?.detail) window.history.back();
+    else dismissDetails();
+  }, [dismissDetails]);
+  const selectTab = (index: number) => {
+    setTab(index);
+    scrollRef.current?.scrollTo({ y: index === 1 && compact ? collectionY.current : 0, animated: true });
+  };
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const frame = requestAnimationFrame(() => asElement(refs.current[0])?.focus());
+    const onPopState = (event: PopStateEvent) => {
+      const index = movies.findIndex(item => item.id === event.state?.detail);
+      if (index < 0) { dismissDetails(); return; }
+      setSelected(index);
+      setShowDetails(true);
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.movementX || event.movementY) usingRemote.current = false;
+    };
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('pointermove', onPointerMove);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('pointermove', onPointerMove);
+    };
+  }, [dismissDetails]);
   useEffect(() => {
     if (showDetails || !restoreFocus.current) return;
     restoreFocus.current = false;
@@ -49,12 +90,13 @@ export function MovieList() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const element = refs.current[selected] as unknown as HTMLElement | null;
-    const frame = requestAnimationFrame(() => element?.scrollIntoView({ block: 'nearest' }));
+    const frame = requestAnimationFrame(() => element?.scrollIntoView({ block: selected < columns ? 'end' : 'nearest' }));
     return () => cancelAnimationFrame(frame);
-  }, [selected, showDetails, compact]);
+  }, [selected, showDetails, compact, columns]);
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (event: KeyboardEvent) => {
+      usingRemote.current = true;
       if (showDetails) {
         if (isBackEvent(event.key)) {
           event.preventDefault();
@@ -64,15 +106,28 @@ export function MovieList() {
       }
       if (!event.key.startsWith('Arrow')) return;
       event.preventDefault();
-      const next = nextIndex(selectedRef.current, event.key, movies.length, columns);
-      const element = refs.current[next] as unknown as HTMLElement | null;
-      if (!element) return;
-      selectedRef.current = next;
-      if (document.activeElement !== element) element.focus({ preventScroll: true });
+      const active = document.activeElement;
+      const tabIndex = tabRefs.current.findIndex(ref => asElement(ref) === active);
+      if (tabIndex >= 0) {
+        if (event.key === 'ArrowDown') asElement(refs.current[selected])?.focus();
+        else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+          const next = Math.max(0, Math.min(tabs.length - 1, tabIndex + (event.key === 'ArrowRight' ? 1 : -1)));
+          asElement(tabRefs.current[next])?.focus();
+        }
+        return;
+      }
+      const current = refs.current.findIndex(ref => asElement(ref) === active);
+      if (current < 0) { asElement(refs.current[selected])?.focus(); return; }
+      if (leavesGridTop(current, event.key, columns)) {
+        asElement(tabRefs.current[tab])?.focus();
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      asElement(refs.current[nextIndex(current, event.key, movies.length, columns)])?.focus();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [columns, showDetails, closeDetails]);
+  }, [selected, columns, tab, showDetails, closeDetails]);
   const header = (
     <View>
         <View style={[s.hero, { marginHorizontal: compact ? 7 : safeX }]}>
@@ -89,7 +144,7 @@ export function MovieList() {
             <Text style={s.detailFoot}>A FRAME ORIGINAL  ↗</Text>
           </View>
         </View>
-        <View style={[s.collectionHead, { marginHorizontal: compact ? 7 : safeX }]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
+        <View onLayout={event => { collectionY.current = event.nativeEvent.layout.y; }} style={[s.collectionHead, { marginHorizontal: compact ? 7 : safeX }]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
     </View>
   );
   const gridContent = (
@@ -97,27 +152,45 @@ export function MovieList() {
         <View style={s.grid} onLayout={event => {
           if (event.nativeEvent.layout.width > 0) setColumns(columnsForWidth(event.nativeEvent.layout.width, cardWidth));
         }}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={selected === index} onFocus={() => select(index)} onSelect={() => { select(index); setShowDetails(true); }} cardRef={ref => { refs.current[index] = ref; }} />)}
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} artHeight={compact ? Math.min(300, Math.round(height * 0.22)) : 300} active={zone === 'grid' && selected === index}
+            preferred={index === 0} canHover={canHover} onFocus={() => { setZone('grid'); setSelected(index); }} onSelect={() => openDetails(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
     </View>
   );
+  const tabBar = (
+        <View style={[s.tabs, narrow && s.tabsNarrow]}>
+          {tabs.map((label, index) => {
+            const text = <Text style={[s.tab, tab === index && s.tabActive, !showDetails && zone === 'nav' && focusedTab === index && s.tabTextFocused]}>{label}</Text>;
+            if (showDetails) return <View key={label} style={s.tabButton}>{text}</View>;
+            return (
+              <Pressable key={label} ref={ref => { tabRefs.current[index] = ref; }} accessibilityRole="tab"
+                accessibilityState={{ selected: tab === index }}
+                onFocus={() => { setZone('nav'); setFocusedTab(index); }} onPress={() => selectTab(index)}
+                style={[s.tabButton, zone === 'nav' && focusedTab === index && s.tabFocused]}>
+                {text}
+              </Pressable>
+            );
+          })}
+        </View>
+  );
   return (
     <View style={[s.root, { paddingTop: 54, paddingBottom: 54 }]}>
-      <View style={[s.nav, { paddingHorizontal: safeX }, width < 600 && s.navCompact]}>
-        <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
-        <View style={s.tabs}><Text numberOfLines={1} style={s.tabActive}>Discover</Text><Text numberOfLines={1} style={s.tab}>The collection</Text></View>
+      <View style={[s.nav, { paddingHorizontal: safeX }, narrow && s.navNarrow]}>
+        <Text style={[s.brand, narrow && s.brandNarrow]}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
+        {!narrow && tabBar}
         <Text style={s.profile}>F</Text>
+        {narrow && tabBar}
       </View>
       {showDetails && <MovieDetails movie={movie} onClose={closeDetails} />}
       <View style={[s.collection, showDetails && { display: 'none' }]}>
         {!compact && header}
-      <ScrollView style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
+      <ScrollView ref={scrollRef} style={s.scroller} contentContainerStyle={[s.content, { paddingHorizontal: safeX - 7 }]}>
         {compact && header}
         {gridContent}
       </ScrollView>
       </View>
-      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>
+      <View style={[s.help, { paddingHorizontal: safeX }]}><Text style={s.helpText}>↑ ↓ ← →  Move</Text><Text style={s.helpText}>{showDetails ? 'BACK  Return to the collection' : 'OK  Open details    ·    ↑ from the top row  Menu'}</Text></View>
     </View>
   );
 }
@@ -126,8 +199,13 @@ const s = StyleSheet.create({
   nav: { height: 84, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center', borderBottomColor: '#263035', borderBottomWidth: 1, gap: 65 },
   brand: { color: '#f5f5e9', fontSize: 28, fontWeight: '800', letterSpacing: 3 },
   brandDot: { color: '#d9f99d', fontSize: 35 },
-  navCompact: { gap: 20 },
-  tabs: { flex: 1, minWidth: 0, flexDirection: 'row', columnGap: 30, flexWrap: 'wrap', overflow: 'hidden', maxHeight: 34 },
+  navNarrow: { height: 'auto', flexWrap: 'wrap', gap: 20, rowGap: 10, paddingVertical: 12 },
+  brandNarrow: { flex: 1 },
+  tabs: { flex: 1, flexDirection: 'row', gap: 12 },
+  tabsNarrow: { flexGrow: 0, flexShrink: 0, flexBasis: '100%', flexWrap: 'wrap' },
+  tabButton: { paddingVertical: 6, paddingHorizontal: 16, borderRadius: 28, borderWidth: 2, borderColor: 'transparent' },
+  tabFocused: { borderColor: '#d9f99d', backgroundColor: '#d9f99d' },
+  tabTextFocused: { color: '#0d1518', fontWeight: '700' },
   tabActive: { color: '#d9f99d', fontSize: 24, fontWeight: '500' },
   tab: { color: '#909e9f', fontSize: 24, fontWeight: '500' },
   profile: { color: '#d9f99d', backgroundColor: '#2b3731', borderRadius: 20, paddingHorizontal: 13, paddingVertical: 9, fontSize: 24, fontWeight: '500' },
@@ -135,11 +213,11 @@ const s = StyleSheet.create({
   scroller: { flex: 1, minHeight: 0 },
   content: { paddingBottom: 20 },
   hero: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingVertical: 16 },
-  heroCopy: { flexGrow: 1, flexBasis: 390, justifyContent: 'center' },
+  heroCopy: { flexGrow: 1, flexShrink: 1, minWidth: 0, flexBasis: 390, justifyContent: 'center' },
   eyebrow: { color: '#d9f99d', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginBottom: 12 },
   headline: { color: '#f0f2e9', fontSize: 52, fontWeight: '600', lineHeight: 58, letterSpacing: -2 },
   subline: { color: '#9ba8aa', fontSize: 24, fontWeight: '500', marginTop: 12, maxWidth: 800, lineHeight: 34 },
-  detail: { flexBasis: 540, flexGrow: 1, maxWidth: 680, minHeight: 256, backgroundColor: '#172428', borderRadius: 12, borderWidth: 1, borderColor: '#2c3b3d', padding: 16, justifyContent: 'center' },
+  detail: { flexBasis: 540, flexGrow: 1, flexShrink: 1, minWidth: 0, maxWidth: 680, minHeight: 256, backgroundColor: '#172428', borderRadius: 12, borderWidth: 1, borderColor: '#2c3b3d', padding: 16, justifyContent: 'center' },
   detailKicker: { color: '#b2ca98', fontSize: 24, fontWeight: '500', letterSpacing: 2, marginBottom: 6 },
   detailTitle: { color: '#f0f2e9', fontSize: 36, fontWeight: '600' },
   metadata: { color: '#d4dfbf', fontSize: 24, fontWeight: '500', marginTop: 6 },
