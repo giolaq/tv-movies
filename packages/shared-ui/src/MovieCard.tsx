@@ -10,7 +10,8 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
 }) {
   const [failed, setFailed] = useState(false);
   const { width: windowWidth } = useWindowDimensions();
-  const narrow = Platform.OS === 'web' && windowWidth < 600;
+  const web = Platform.OS === 'web';
+  const narrow = web && windowWidth < 600;
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
@@ -20,14 +21,14 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
         onFocus();
       }}
       style={[s.card, { width }, Platform.OS === 'web' && s.pointer, active && s.active]}>
-      <View style={[s.art, Platform.OS === 'web' ? s.responsiveArt : { height: artHeight }]}>
+      <View style={[s.art, web ? s.responsiveArt : { height: artHeight }, web && !narrow && { maxHeight: artHeight }]}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
-        <View style={s.score}><Text style={[s.scoreText, narrow && s.narrowScoreText]}>★ {movie.rating}</Text></View>
-        <View style={[s.caption, narrow && s.narrowCaption]}><Text numberOfLines={narrow ? 1 : undefined} style={[s.captionText, narrow && s.narrowCaptionText]}>{movie.genre.toUpperCase()}</Text></View>
+        <View style={s.score}><Text style={[s.scoreText, web && s.webScoreText, narrow && s.narrowScoreText]}>★ {movie.rating}</Text></View>
+        <View style={[s.caption, web && s.webCaption, narrow && s.narrowCaption]}><Text numberOfLines={web ? 1 : undefined} style={[s.captionText, web && s.webCaptionText, narrow && s.narrowCaptionText]}>{movie.genre.toUpperCase()}</Text></View>
       </View>
-      <Text numberOfLines={narrow ? 2 : undefined} style={[s.title, narrow && s.narrowTitle]}>{movie.title}</Text>
-      <Text style={[s.year, narrow && s.narrowYear]}>{movie.year}  ·  {movie.genre}</Text>
+      <Text numberOfLines={web ? (narrow ? 2 : 1) : undefined} style={[s.title, web && s.webTitle, narrow && s.narrowTitle]}>{movie.title}</Text>
+      <Text style={[s.year, web && s.webYear, narrow && s.narrowYear]}>{movie.year}  ·  {movie.genre}</Text>
     </Pressable>
   );
 }
@@ -37,6 +38,11 @@ const s = StyleSheet.create({
   art: { height: 300, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   pointer: { cursor: 'pointer' },
   responsiveArt: { height: undefined, aspectRatio: 2 / 3 },
+  webScoreText: { fontSize: 16 },
+  webCaption: { padding: 8 },
+  webCaptionText: { fontSize: 12, letterSpacing: 1 },
+  webTitle: { fontSize: 18, lineHeight: 24 },
+  webYear: { fontSize: 14, lineHeight: 20 },
   narrowScoreText: { fontSize: 12 },
   narrowCaption: { padding: 8 },
   narrowCaptionText: { fontSize: 10, letterSpacing: 1 },
