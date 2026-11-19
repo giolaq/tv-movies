@@ -1,14 +1,21 @@
-import { useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useRef, useState } from 'react';
+import { Animated, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { Movie } from './movies';
 import { CARD_MARGIN } from './navigation';
+
+type PosterState = 'loading' | 'loaded' | 'failed';
 
 export function MovieCard({ movie, width, artHeight, active, preferred, onFocus, onSelect, canHover, cardRef }: {
   movie: Movie; width: number; artHeight: number; active: boolean; preferred: boolean; onFocus: () => void; onSelect: () => void;
   canHover: () => boolean;
   cardRef: (ref: View | null) => void;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [poster, setPoster] = useState<PosterState>('loading');
+  const opacity = useRef(new Animated.Value(0)).current;
+  const onLoad = () => {
+    setPoster('loaded');
+    Animated.timing(opacity, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== 'web' }).start();
+  };
   const { width: windowWidth } = useWindowDimensions();
   const web = Platform.OS === 'web';
   const narrow = web && windowWidth < 600;
@@ -22,8 +29,16 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
       }}
       style={[s.card, { width }, Platform.OS === 'web' && s.pointer, active && s.active]}>
       <View style={[s.art, web ? s.responsiveArt : { height: artHeight }, web && !narrow && { maxHeight: artHeight }]}>
-        {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
-          : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
+        {poster !== 'loaded' && (
+          <View style={[s.fallback, web && s.webFallback]}>
+            <Text numberOfLines={3} style={[s.fallbackTitle, web && s.webFallbackTitle, poster === 'loading' && s.loadingTitle]}>{movie.title}</Text>
+            <Text style={[s.fallbackLabel, web && s.webFallbackLabel]}>{poster === 'loading' ? 'LOADING POSTER…' : 'FRAME ORIGINAL'}</Text>
+          </View>
+        )}
+        {poster !== 'failed' && (
+          <Animated.Image source={{ uri: movie.poster }} accessibilityIgnoresInvertColors
+            style={[s.image, { opacity }]} onLoad={onLoad} onError={() => setPoster('failed')} />
+        )}
         <View style={s.score}><Text style={[s.scoreText, Platform.isTV && s.tvScore, web && s.webScoreText, narrow && s.narrowScoreText]}>★ {movie.rating}</Text></View>
       </View>
       <Text numberOfLines={web ? (narrow ? 2 : 1) : undefined} style={[s.title, Platform.isTV && s.tvTitle, web && s.webTitle, narrow && s.narrowTitle]}>{movie.title}</Text>
@@ -43,9 +58,13 @@ const s = StyleSheet.create({
   narrowScoreText: { fontSize: 12 },
   narrowTitle: { fontSize: 16, lineHeight: 21 },
   narrowYear: { fontSize: 12, lineHeight: 17 },
-  image: { width: '100%', height: '100%' },
-  fallback: { flex: 1, justifyContent: 'center', padding: 20 },
+  image: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  fallback: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', padding: 20 },
   fallbackTitle: { color: '#e8efdf', fontSize: 25, fontWeight: '700' },
+  webFallback: { padding: 12, paddingTop: 40 },
+  webFallbackTitle: { fontSize: 17, lineHeight: 22 },
+  webFallbackLabel: { fontSize: 11, letterSpacing: 1, marginTop: 10 },
+  loadingTitle: { color: '#7f938c' },
   fallbackLabel: { color: '#d9f99d', fontSize: 24, fontWeight: '500', marginTop: 15 },
   score: { position: 'absolute', top: 10, right: 8, backgroundColor: '#101815', padding: 5, borderRadius: 5 },
   scoreText: { color: '#e8f2d9', fontSize: 24, fontWeight: '700' },
