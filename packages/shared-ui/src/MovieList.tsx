@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { MovieCard } from './MovieCard';
 import { movies } from './movies';
 import { nextIndex } from './navigation';
@@ -7,8 +7,26 @@ import { nextIndex } from './navigation';
 export function MovieList() {
   const [selected, setSelected] = useState(0);
   const { width } = useWindowDimensions();
-  const columns = Math.max(1, Math.floor((width - 80) / 198));
+  const web = Platform.OS === 'web';
+  const narrow = web && width < 600;
+  const [gridWidth, setGridWidth] = useState(0);
+  const columns = web ? Math.max(2, Math.floor(gridWidth / 198)) : Math.max(1, Math.floor((width - 80) / 198));
+  const cardWidth = web && gridWidth ? gridWidth / columns - 14 : undefined;
   const refs = useRef<(View | null)[]>([]);
+  const scrollRef = useRef<ScrollView>(null);
+  const detailRef = useRef<View>(null);
+  const collectionRef = useRef<View>(null);
+  const scrollToDetail = () => {
+    if (!web) return;
+    const element = detailRef.current as unknown as HTMLElement | null;
+    const viewport = scrollRef.current as unknown as HTMLElement | null;
+    if (!element || !viewport) return;
+    const bounds = element.getBoundingClientRect();
+    const frame = viewport.getBoundingClientRect();
+    if (bounds.top < frame.top || bounds.bottom > frame.bottom) {
+      element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  };
   const movie = movies[selected];
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -25,19 +43,29 @@ export function MovieList() {
   }, [selected, columns]);
   return (
     <View style={s.root}>
-      <View style={s.nav}>
+      <View style={[s.nav, narrow && s.narrowNav]}>
         <Text style={s.brand}>f<Text style={s.brandDot}>.</Text>  FRAME</Text>
-        <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>
+        {!web && <View style={s.tabs}><Text style={s.tabActive}>Discover</Text><Text style={s.tab}>The collection</Text></View>}
+        {web && !narrow && <View style={s.tabs}>
+          <Pressable accessibilityRole="button" onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} style={web && s.pointer}>
+            {state => <Text style={[s.tabActive, web && (state as typeof state & { hovered?: boolean }).hovered && s.tabHover]}>Discover</Text>}
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => {
+            if (web) (collectionRef.current as unknown as HTMLElement | null)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          }} style={web && s.pointer}>
+            {state => <Text style={[s.tab, web && (state as typeof state & { hovered?: boolean }).hovered && s.tabHover]}>The collection</Text>}
+          </Pressable>
+        </View>}
         <Text style={s.profile}>F</Text>
       </View>
-      <ScrollView contentContainerStyle={s.content}>
-        <View style={s.hero}>
-          <View style={s.heroCopy}>
+      <ScrollView ref={scrollRef} contentContainerStyle={[s.content, narrow && s.narrowContent]}>
+        <View style={[s.hero, narrow && s.narrowHero]}>
+          <View style={[s.heroCopy, narrow && s.narrowHeroCopy]}>
             <Text style={s.eyebrow}>THE ART OF GETTING LOST IN A STORY</Text>
-            <Text style={s.headline}>A world worth{ '\n' }watching.</Text>
+            <Text style={[s.headline, narrow && s.narrowHeadline]}>A world worth{ '\n' }watching.</Text>
             <Text style={s.subline}>Extraordinary stories. Unexpected perspectives. Find your next escape.</Text>
           </View>
-          <View style={s.detail} accessibilityLiveRegion="polite">
+          <View ref={detailRef} style={[s.detail, narrow && s.narrowDetail]} accessibilityLiveRegion="polite">
             <Text style={s.detailKicker}>IN FOCUS  /  {String(selected + 1).padStart(2, '0')}</Text>
             <Text style={s.detailTitle}>{movie.title}</Text>
             <Text style={s.metadata}>★ {movie.rating}   ·   {movie.year}   ·   {movie.genre}</Text>
@@ -45,18 +73,27 @@ export function MovieList() {
             <Text style={s.detailFoot}>A FRAME ORIGINAL  ↗</Text>
           </View>
         </View>
-        <View style={s.collectionHead}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-        <View style={s.grid}>
-          {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => setSelected(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
+        <View ref={collectionRef} style={[s.collectionHead, narrow && s.narrowCollectionHead]}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
+        <View style={s.grid} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>
+          {movies.map((item, index) => <MovieCard key={item.id} movie={item} width={cardWidth} active={selected === index} onFocus={() => setSelected(index)} onPress={scrollToDetail} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
       </ScrollView>
-      <View style={s.help}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>
+      {!narrow && <View style={s.help}><Text style={s.helpText}>↑ ↓ ← →  Explore the collection</Text><Text style={s.helpText}>TAB  Next film    ·    ENTER  Select    ·    Mouse supported</Text></View>}
     </View>
   );
 }
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0d1518' },
+  pointer: { cursor: 'pointer' },
+  tabHover: { color: '#f5f5e9' },
+  narrowNav: { paddingHorizontal: 22, gap: 16, justifyContent: 'space-between', height: 70 },
+  narrowContent: { padding: 14, paddingBottom: 28 },
+  narrowHero: { gap: 24, marginBottom: 26 },
+  narrowHeroCopy: { flexBasis: '100%', flexShrink: 1 },
+  narrowHeadline: { fontSize: 38, lineHeight: 43, letterSpacing: -1.5 },
+  narrowDetail: { flexBasis: '100%', flexShrink: 1, padding: 21 },
+  narrowCollectionHead: { flexDirection: 'column', alignItems: 'flex-start', gap: 14 },
   nav: { height: 84, paddingHorizontal: 40, flexDirection: 'row', alignItems: 'center', borderBottomColor: '#263035', borderBottomWidth: 1, gap: 65 },
   brand: { color: '#f5f5e9', fontSize: 19, fontWeight: '800', letterSpacing: 3 },
   brandDot: { color: '#d9f99d', fontSize: 35 },

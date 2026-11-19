@@ -1,18 +1,26 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
 
-export function MovieCard({ movie, active, onFocus, cardRef }: {
+export function MovieCard({ movie, active, onFocus, onPress, width, cardRef }: {
   movie: Movie; active: boolean; onFocus: () => void;
+  onPress?: () => void; width?: number;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={onFocus}
-      style={[s.card, active && s.active]}>
-      <View style={s.art}>
+      onFocus={onFocus} onPress={event => {
+        onFocus();
+        if (Platform.OS === 'web' && (event.nativeEvent as unknown as { detail?: number }).detail) onPress?.();
+      }}
+      style={state => {
+        const { hovered } = state as typeof state & { hovered?: boolean };
+        return [s.card, width !== undefined && { width }, Platform.OS === 'web' && s.pointer,
+          Platform.OS === 'web' && hovered && !active && s.hovered, active && s.active];
+      }}>
+      <View style={[s.art, width !== undefined && s.responsiveArt]}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
         <View style={s.score}><Text style={s.scoreText}>★ {movie.rating}</Text></View>
@@ -26,7 +34,10 @@ export function MovieCard({ movie, active, onFocus, cardRef }: {
 const s = StyleSheet.create({
   card: { width: 184, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: 7 },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26', transform: [{ scale: 1.025 }] },
+  pointer: { cursor: 'pointer' },
+  hovered: { borderColor: '#7c9d94', backgroundColor: '#233338' },
   art: { height: 235, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
+  responsiveArt: { height: undefined, aspectRatio: 2 / 3 },
   image: { width: '100%', height: '100%' },
   fallback: { flex: 1, justifyContent: 'center', padding: 20 },
   fallbackTitle: { color: '#e8efdf', fontSize: 25, fontWeight: '700' },

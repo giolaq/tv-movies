@@ -12,6 +12,7 @@
       "package": "com.frame.movies"
     },
     "web": {
+      "favicon": "./assets/favicon.png",
       "bundler": "metro",
       "output": "single",
       "name": "Frame — Movie collection"
