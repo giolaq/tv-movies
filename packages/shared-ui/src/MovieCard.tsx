@@ -10,6 +10,7 @@ export function MovieCard({ movie, active, onFocus, onSelect, cardRef }: {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
+      hasTVPreferredFocus={active}
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
       onFocus={onFocus} onPress={onSelect}
       onHoverIn={event => {
