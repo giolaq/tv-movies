@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
+import { CARD_WIDTH, CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, active, onFocus, onPress, disabled, cardRef }: {
-  movie: Movie; active: boolean; onFocus: () => void; onPress: () => void; disabled: boolean;
+export function MovieCard({ movie, active, onFocus, onSelect, disabled, cardRef }: {
+  movie: Movie; active: boolean; onFocus: () => void; onSelect: () => void; disabled: boolean;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
@@ -11,7 +12,12 @@ export function MovieCard({ movie, active, onFocus, onPress, disabled, cardRef }
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
       disabled={disabled} focusable={!disabled} hasTVPreferredFocus={active && !disabled}
-      onFocus={onFocus} onPress={onPress}
+      onFocus={onFocus} onPress={onSelect}
+      onHoverIn={event => {
+        if (disabled) return;
+        onFocus();
+        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus({ preventScroll: true });
+      }}
       style={[s.card, active && s.active]}>
       <View style={s.art}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
@@ -25,7 +31,7 @@ export function MovieCard({ movie, active, onFocus, onPress, disabled, cardRef }
   );
 }
 const s = StyleSheet.create({
-  card: { width: 260, padding: 8, borderWidth: 3, borderColor: 'transparent', borderRadius: 12, margin: 10 },
+  card: { width: CARD_WIDTH, padding: 8, borderWidth: 3, borderColor: 'transparent', borderRadius: 12, margin: CARD_MARGIN },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26' },
   art: { height: 280, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   image: { width: '100%', height: '100%' },

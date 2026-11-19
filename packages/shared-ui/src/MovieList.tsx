@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TVEventControl, View, useWindowDimensions } from 'react-native';
+import { BackHandler, Platform, ScrollView, StyleSheet, Text, TVEventControl, View, useWindowDimensions } from 'react-native';
 import { MovieCard } from './MovieCard';
+import { MovieDetails } from './MovieDetails';
 import { movies, type Movie } from './movies';
-import { nextIndex } from './navigation';
+import { columnsForWidth, isBackEvent, nextIndex } from './navigation';
 import { formatRuntime } from './runtime';
 
 type BackSource = { addEventListener: (event: 'hardwareBackPress', handler: () => boolean) => { remove: () => void } };
@@ -23,14 +24,6 @@ function MovieInfo({ movie }: { movie: Movie }) {
   </View>;
 }
 
-function DetailImage({ movie }: { movie: Movie }) {
-  const [failed, setFailed] = useState(false);
-  return <View style={s.detailArt}>
-    {failed ? <Text style={s.title}>{movie.title}</Text> :
-      <Image accessibilityLabel={movie.title} source={{ uri: movie.poster }} style={s.image} resizeMode="cover" onError={() => setFailed(true)} />}
-  </View>;
-}
-
 export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSource } = {}) {
   const [selected, setSelected] = useState(0);
   const [details, setDetails] = useState(false);
@@ -38,9 +31,8 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
   const { width, height } = useWindowDimensions();
   const horizontal = width * 0.05;
   const vertical = height * 0.05;
-  const columns = Math.max(1, Math.floor((gridWidth || width - horizontal * 2) / 280));
+  const columns = columnsForWidth(gridWidth || width - horizontal * 2);
   const refs = useRef<(View | null)[]>([]);
-  const backRef = useRef<View | null>(null);
   const gridRef = useRef<ScrollView | null>(null);
   const scrollOffset = useRef(0);
   const savedOffset = useRef(0);
@@ -49,8 +41,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      if (details) focusView(backRef.current);
-      else {
+      if (!details) {
         gridRef.current?.scrollTo({ y: savedOffset.current, animated: false });
         focusView(refs.current[selected]);
       }
@@ -74,7 +65,7 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' || event.key === 'Backspace') {
+      if (isBackEvent(event.key)) {
         event.preventDefault();
         closeDetails();
         return;
@@ -82,7 +73,6 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
       if (details) {
         if (event.key.startsWith('Arrow') || event.key === 'Tab') {
           event.preventDefault();
-          focusView(backRef.current);
         }
         return;
       }
@@ -106,26 +96,14 @@ export function MovieList({ backHandler = BackHandler }: { backHandler?: BackSou
           onScroll={event => { scrollOffset.current = event.nativeEvent.contentOffset.y; }}>
           <View style={s.grid} onLayout={event => setGridWidth(event.nativeEvent.layout.width)}>
           {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} disabled={details}
-            onFocus={() => setSelected(index)} onPress={() => { setSelected(index); savedOffset.current = scrollOffset.current; setDetails(true); }}
+            onFocus={() => setSelected(index)} onSelect={() => { setSelected(index); savedOffset.current = scrollOffset.current; setDetails(true); }}
             cardRef={ref => { refs.current[index] = ref; }} />)}
           </View>
         </ScrollView>
       </> : <View style={s.empty}><Text style={s.title}>No movies available</Text></View>}
       <View style={s.help}><Text style={s.hint}>↑ ↓ ← →  Browse films</Text><Text style={s.hint}>OK / ENTER  Details</Text></View>
     </View>
-    {details && movie && <View style={[s.details, { paddingHorizontal: horizontal, paddingVertical: vertical }]} accessibilityViewIsModal>
-      <Text style={s.brand}>f.  FRAME / DETAILS</Text>
-      <View style={s.detailBody}>
-        <DetailImage key={movie.id} movie={movie} />
-        <View style={s.detailCopy}>
-          <MovieInfo movie={movie} />
-          <Pressable ref={backRef} accessibilityRole="button" accessibilityLabel="Back to collection" hasTVPreferredFocus onPress={closeDetails} style={s.back}>
-            <Text style={s.backText}>← Back to collection</Text>
-          </Pressable>
-        </View>
-      </View>
-      <Text style={s.hint}>BACK / ESC  Return  ·  OK / ENTER  Back to collection</Text>
-    </View>}
+    {details && movie && <MovieDetails key={movie.id} movie={movie} onClose={closeDetails} />}
   </View>;
 }
 
@@ -144,11 +122,4 @@ const s = StyleSheet.create({
   help: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 22 },
   hint: { color: '#c2ceca', fontSize: 20, lineHeight: 28 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  details: { ...StyleSheet.absoluteFillObject, backgroundColor: '#0d1518' },
-  detailBody: { flex: 1, flexDirection: 'row', gap: 64, paddingVertical: 40 },
-  detailArt: { width: '32%', backgroundColor: '#283c38', borderRadius: 16, overflow: 'hidden', justifyContent: 'center' },
-  image: { width: '100%', height: '100%' },
-  detailCopy: { flex: 1, justifyContent: 'center', gap: 40 },
-  back: { alignSelf: 'flex-start', padding: 24, borderRadius: 12, backgroundColor: '#d9f99d', borderWidth: 4, borderColor: '#fff' },
-  backText: { color: '#0d1518', fontSize: 26, fontWeight: '700' },
 });
