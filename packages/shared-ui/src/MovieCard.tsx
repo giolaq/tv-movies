@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import type { Movie } from './movies';
 import { CARD_MARGIN } from './navigation';
 
@@ -9,6 +9,8 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
+  const { width: windowWidth } = useWindowDimensions();
+  const narrow = Platform.OS === 'web' && windowWidth < 600;
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
@@ -21,11 +23,11 @@ export function MovieCard({ movie, width, artHeight, active, preferred, onFocus,
       <View style={[s.art, Platform.OS === 'web' ? s.responsiveArt : { height: artHeight }]}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
-        <View style={s.score}><Text style={s.scoreText}>★ {movie.rating}</Text></View>
-        <View style={s.caption}><Text style={s.captionText}>{movie.genre.toUpperCase()}</Text></View>
+        <View style={s.score}><Text style={[s.scoreText, narrow && s.narrowScoreText]}>★ {movie.rating}</Text></View>
+        <View style={[s.caption, narrow && s.narrowCaption]}><Text numberOfLines={narrow ? 1 : undefined} style={[s.captionText, narrow && s.narrowCaptionText]}>{movie.genre.toUpperCase()}</Text></View>
       </View>
-      <Text style={s.title}>{movie.title}</Text>
-      <Text style={s.year}>{movie.year}  ·  {movie.genre}</Text>
+      <Text numberOfLines={narrow ? 2 : undefined} style={[s.title, narrow && s.narrowTitle]}>{movie.title}</Text>
+      <Text style={[s.year, narrow && s.narrowYear]}>{movie.year}  ·  {movie.genre}</Text>
     </Pressable>
   );
 }
@@ -35,6 +37,11 @@ const s = StyleSheet.create({
   art: { height: 300, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   pointer: { cursor: 'pointer' },
   responsiveArt: { height: undefined, aspectRatio: 2 / 3 },
+  narrowScoreText: { fontSize: 12 },
+  narrowCaption: { padding: 8 },
+  narrowCaptionText: { fontSize: 10, letterSpacing: 1 },
+  narrowTitle: { fontSize: 16, lineHeight: 21 },
+  narrowYear: { fontSize: 12, lineHeight: 17 },
   image: { width: '100%', height: '100%' },
   fallback: { flex: 1, justifyContent: 'center', padding: 20 },
   fallbackTitle: { color: '#e8efdf', fontSize: 25, fontWeight: '700' },
