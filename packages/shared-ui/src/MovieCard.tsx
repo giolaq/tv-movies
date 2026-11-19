@@ -1,16 +1,21 @@
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
+import { CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, width, active, onFocus, cardRef }: {
-  movie: Movie; width: number; active: boolean; onFocus: () => void;
+export function MovieCard({ movie, width, active, onFocus, onSelect, cardRef }: {
+  movie: Movie; width: number; active: boolean; onFocus: () => void; onSelect: () => void;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={onFocus}
+      onFocus={onFocus} onPress={onSelect}
+      onHoverIn={event => {
+        onFocus();
+        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
+      }}
       style={[s.card, { width }, active && s.active]}>
       <View style={s.art}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
@@ -24,7 +29,7 @@ export function MovieCard({ movie, width, active, onFocus, cardRef }: {
   );
 }
 const s = StyleSheet.create({
-  card: { padding: 5, borderWidth: 4, borderColor: 'transparent', borderRadius: 12, margin: 7 },
+  card: { padding: 5, borderWidth: 4, borderColor: 'transparent', borderRadius: 12, margin: CARD_MARGIN },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26' },
   art: { height: 300, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   image: { width: '100%', height: '100%' },
