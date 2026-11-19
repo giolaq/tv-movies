@@ -3,28 +3,21 @@ import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import type { Movie } from './movies';
 import { CARD_WIDTH, CARD_MARGIN } from './navigation';
 
-export function MovieCard({ movie, active, onFocus, onPress, onSelect, width, cardRef }: {
+export function MovieCard({ movie, active, onFocus, onSelect, width, cardRef }: {
   movie: Movie; active: boolean; onFocus: () => void;
-  onPress?: () => void; onSelect: () => void; width?: number;
+  onSelect: () => void; width?: number;
   cardRef: (ref: View | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <Pressable ref={cardRef} accessibilityRole="button"
       accessibilityLabel={movie.title + ', ' + movie.year + ', rated ' + movie.rating}
-      onFocus={onFocus} onPress={event => {
+      onFocus={onFocus} onPress={onSelect}
+      onHoverIn={event => {
         onFocus();
-        if (Platform.OS === 'web' && (event.nativeEvent as unknown as { detail?: number }).detail) onPress?.();
-        else onSelect();
+        if (Platform.OS === 'web') (event.currentTarget as unknown as HTMLElement).focus();
       }}
-      onHoverIn={() => {
-        if (Platform.OS !== 'web') onFocus();
-      }}
-      style={state => {
-        const { hovered } = state as typeof state & { hovered?: boolean };
-        return [s.card, width !== undefined && { width }, Platform.OS === 'web' && s.pointer,
-          Platform.OS === 'web' && hovered && !active && s.hovered, active && s.active];
-      }}>
+      style={[s.card, width !== undefined && { width }, Platform.OS === 'web' && s.pointer, active && s.active]}>
       <View style={[s.art, width !== undefined && s.responsiveArt]}>
         {failed ? <View style={s.fallback}><Text style={s.fallbackTitle}>{movie.title}</Text><Text style={s.fallbackLabel}>FRAME ORIGINAL</Text></View>
           : <Image source={{ uri: movie.poster }} style={s.image} onError={() => setFailed(true)} />}
@@ -40,7 +33,6 @@ const s = StyleSheet.create({
   card: { width: CARD_WIDTH, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: CARD_MARGIN },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26', transform: [{ scale: 1.025 }] },
   pointer: { cursor: 'pointer' },
-  hovered: { borderColor: '#7c9d94', backgroundColor: '#233338' },
   art: { height: 235, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   responsiveArt: { height: undefined, aspectRatio: 2 / 3 },
   image: { width: '100%', height: '100%' },
