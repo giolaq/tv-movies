@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Movie } from './movies';
+import { CARD_WIDTH, CARD_MARGIN } from './navigation';
 
 export function MovieCard({ movie, active, onFocus, cardRef }: {
   movie: Movie; active: boolean; onFocus: () => void;
@@ -24,7 +25,7 @@ export function MovieCard({ movie, active, onFocus, cardRef }: {
   );
 }
 const s = StyleSheet.create({
-  card: { width: 184, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: 7 },
+  card: { width: CARD_WIDTH, padding: 5, borderWidth: 2, borderColor: 'transparent', borderRadius: 12, margin: CARD_MARGIN },
   active: { borderColor: '#d9f99d', backgroundColor: '#222d26', transform: [{ scale: 1.025 }] },
   art: { height: 235, borderRadius: 7, overflow: 'hidden', backgroundColor: '#283c38' },
   image: { width: '100%', height: '100%' },

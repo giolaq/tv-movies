@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { MovieCard } from './MovieCard';
 import { movies } from './movies';
-import { nextIndex } from './navigation';
+import { columnsForWidth, nextIndex } from './navigation';
 
 export function MovieList() {
   const [selected, setSelected] = useState(0);
-  const { width } = useWindowDimensions();
-  const columns = Math.max(1, Math.floor((width - 80) / 198));
+  const [columns, setColumns] = useState(1);
   const refs = useRef<(View | null)[]>([]);
   const movie = movies[selected];
   useEffect(() => {
@@ -46,7 +45,7 @@ export function MovieList() {
           </View>
         </View>
         <View style={s.collectionHead}><View><Text style={s.collectionTitle}>The collection</Text><Text style={s.collectionSub}>Good stories stay with you.</Text></View><Text style={s.count}>20 FILMS  /  HANDPICKED</Text></View>
-        <View style={s.grid}>
+        <View style={s.grid} onLayout={event => setColumns(columnsForWidth(event.nativeEvent.layout.width))}>
           {movies.map((item, index) => <MovieCard key={item.id} movie={item} active={selected === index} onFocus={() => setSelected(index)} cardRef={ref => { refs.current[index] = ref; }} />)}
         </View>
         <Text style={s.footer}>FRAME  /  A LITTLE CURIOSITY GOES A LONG WAY.</Text>
